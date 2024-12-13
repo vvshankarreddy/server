@@ -1,17 +1,18 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
+const path = require('path');
 const dotenv = require('dotenv');
 
-// Initialize dotenv for environment variables
 dotenv.config();
 
-// Initialize app and middleware
 const app = express();
 app.use(bodyParser.json());
 
-// MongoDB connection
+// Serve the HTML file for health check
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -21,16 +22,26 @@ mongoose.connect(process.env.MONGO_URI, {
   console.log("Failed to connect to MongoDB", err);
 });
 
-// Define User model
-const User = mongoose.model('User', new mongoose.Schema({
-  email: String,
-  password: String,
-}));
+// Health check endpoint
+app.get('/health-check', async (req, res) => {
+  try {
+    // Check if the server is running and if the database is connected
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'not connected';
+    res.json({ server: 'up', database: dbStatus });
+  } catch (error) {
+    res.json({ server: 'down', database: 'not connected' });
+  }
+});
 
-// API: Signup
+// Signup route (example route)
 app.post('/signup', async (req, res) => {
   const { email, password } = req.body;
-  
+
+  const User = mongoose.model('User', new mongoose.Schema({
+    email: String,
+    password: String,
+  }));
+
   const existingUser = await User.findOne({ email });
   if (existingUser) return res.status(400).send("Email already in use");
 
@@ -46,7 +57,6 @@ app.post('/signup', async (req, res) => {
   res.status(201).send("User created successfully.");
 });
 
-// Start the server
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
