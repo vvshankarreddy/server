@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const path = require('path');
 const dotenv = require('dotenv');
-const bcrypt = require('bcrypt'); // Added bcrypt for password hashing
+const bcrypt = require('bcryptjs'); // Added bcrypt for password hashing
 
 dotenv.config(); // Load environment variables
 
