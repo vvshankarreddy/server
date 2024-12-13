@@ -3,12 +3,15 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const path = require('path');
 const dotenv = require('dotenv');
-const User = require('./models/user'); // Import the User model
+const bcrypt = require('bcryptjs'); // Added bcrypt for password hashing
 
 dotenv.config(); // Load environment variables
 
 const app = express();
 app.use(bodyParser.json());
+
+// Serve the HTML file for health check
+app.use(express.static(path.join(__dirname, 'public')));
 
 // MongoDB URI from environment variables
 const mongoURI = process.env.MONGO_URI;
@@ -26,8 +29,7 @@ mongoose.connect(mongoURI, {
 }).then(() => {
   console.log("Connected to MongoDB");
 }).catch(err => {
-  console.error("Failed to connect to MongoDB:", err);
-  process.exit(1); // Exit the server if connection fails
+  console.log("Failed to connect to MongoDB", err);
 });
 
 // Health check endpoint
@@ -36,34 +38,34 @@ app.get('/health-check', async (req, res) => {
     const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'not connected';
     res.json({ server: 'up', database: dbStatus });
   } catch (error) {
-    console.error('Error during health check:', error);
     res.json({ server: 'down', database: 'not connected' });
   }
 });
 
-// Signup route
+// Import the User model
+const User = require('./models/user');
+
+// Signup route (example route)
 app.post('/signup', async (req, res) => {
   const { email, password } = req.body;
 
-  try {
-    // Check if the user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).send("Email already in use");
-    }
-
-    // Create and save new user
-    const user = new User({
-      email,
-      password,  // Password will be hashed automatically by pre-save hook
-    });
-
-    await user.save();
-    res.status(201).send("User created successfully.");
-  } catch (err) {
-    console.error("Error creating user:", err);
-    res.status(500).send("Error creating user");
+  // Check if the user already exists
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    return res.status(400).send("Email already in use");
   }
+
+  // Hash the password before saving
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const user = new User({
+    email,
+    password: hashedPassword,
+  });
+
+  await user.save();
+
+  res.status(201).send("User created successfully.");
 });
 
 // Define port for the server
