@@ -4,24 +4,28 @@
     "description": "Signup and Login with Node.js and Python",
     "main": "server.js",
     "scripts": {
-        "start": "node server.js"
+      "start": "node server.js"
     },
     "dependencies": {
-        "bcryptjs": "^2.4.3",
-        "body-parser": "^1.20.3",
-        "dotenv": "^16.4.7",
-        "express": "^4.21.2",
-        "mongoose": "^8.8.4"
+      "bcryptjs": "^2.4.3",
+      "body-parser": "^1.20.3",
+      "dotenv": "^16.4.7",
+      "express": "^4.21.2",
+      "mongoose": "^8.8.4"
     },
     "repository": {
-        "type": "git",
-        "url": "git+https://github.com/vvshankarreddy/server.git"
+      "type": "git",
+      "url": "git+https://github.com/vvshankarreddy/server.git"
     },
     "keywords": [],
     "author": "",
     "license": "ISC",
     "bugs": {
-        "url": "https://github.com/vvshankarreddy/server/issues"
+      "url": "https://github.com/vvshankarreddy/server/issues"
     },
-    "homepage": "https://github.com/vvshankarreddy/server#readme"
-}
+    "homepage": "https://github.com/vvshankarreddy/server#readme",
+    "engines": {
+      "node": "16.x"
+    }
+  }
+  

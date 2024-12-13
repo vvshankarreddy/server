@@ -10,9 +10,6 @@ dotenv.config(); // Load environment variables
 const app = express();
 app.use(bodyParser.json());
 
-// Serve static files for health check or other purposes
-app.use(express.static(path.join(__dirname, 'public')));
-
 // MongoDB URI from environment variables
 const mongoURI = process.env.MONGO_URI;
 
@@ -29,7 +26,8 @@ mongoose.connect(mongoURI, {
 }).then(() => {
   console.log("Connected to MongoDB");
 }).catch(err => {
-  console.log("Failed to connect to MongoDB", err);
+  console.error("Failed to connect to MongoDB:", err);
+  process.exit(1); // Exit the server if connection fails
 });
 
 // Health check endpoint
@@ -38,31 +36,32 @@ app.get('/health-check', async (req, res) => {
     const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'not connected';
     res.json({ server: 'up', database: dbStatus });
   } catch (error) {
+    console.error('Error during health check:', error);
     res.json({ server: 'down', database: 'not connected' });
   }
 });
 
-// Signup route (example route)
+// Signup route
 app.post('/signup', async (req, res) => {
   const { email, password } = req.body;
 
-  // Check if the user already exists
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    return res.status(400).send("Email already in use");
-  }
-
-  // Create a new user
-  const user = new User({
-    email,
-    password,  // Password will be hashed before saving due to the pre-save hook
-  });
-
   try {
+    // Check if the user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).send("Email already in use");
+    }
+
+    // Create and save new user
+    const user = new User({
+      email,
+      password,  // Password will be hashed automatically by pre-save hook
+    });
+
     await user.save();
     res.status(201).send("User created successfully.");
   } catch (err) {
-    console.error(err);
+    console.error("Error creating user:", err);
     res.status(500).send("Error creating user");
   }
 });
