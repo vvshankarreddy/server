@@ -3,8 +3,7 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const path = require('path');
 const dotenv = require('dotenv');
-const bcrypt = require('bcryptjs'); // Added bcrypt for password hashing
-const User = require('./models/users');  // Ensure this is only declared once
+const signupRoute = require('./auth/signup');  // Import the signup route
 
 dotenv.config(); // Load environment variables
 
@@ -43,28 +42,8 @@ app.get('/health-check', async (req, res) => {
   }
 });
 
-// Signup route (example route)
-app.post('/signup', async (req, res) => {
-  const { email, password } = req.body;
-
-  // Check if the user already exists
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    return res.status(400).send("Email already in use");
-  }
-
-  // Hash the password before saving
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  const user = new User({
-    email,
-    password: hashedPassword,
-  });
-
-  await user.save();
-
-  res.status(201).send("User created successfully.");
-});
+// Use the signup route
+app.use('/signup', signupRoute);  // Attach signup.js route to /signup path
 
 // Define port for the server
 const port = process.env.PORT || 3000;
