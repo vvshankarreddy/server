@@ -3,14 +3,14 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const path = require('path');
 const dotenv = require('dotenv');
-const bcrypt = require('bcryptjs'); // Added bcrypt for password hashing
+const User = require('./models/user'); // Import the User model
 
 dotenv.config(); // Load environment variables
 
 const app = express();
 app.use(bodyParser.json());
 
-// Serve the HTML file for health check
+// Serve static files for health check or other purposes
 app.use(express.static(path.join(__dirname, 'public')));
 
 // MongoDB URI from environment variables
@@ -46,28 +46,25 @@ app.get('/health-check', async (req, res) => {
 app.post('/signup', async (req, res) => {
   const { email, password } = req.body;
 
-  const User = mongoose.model('User', new mongoose.Schema({
-    email: String,
-    password: String,
-  }));
-
   // Check if the user already exists
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     return res.status(400).send("Email already in use");
   }
 
-  // Hash the password before saving
-  const hashedPassword = await bcrypt.hash(password, 10);
-
+  // Create a new user
   const user = new User({
     email,
-    password: hashedPassword,
+    password,  // Password will be hashed before saving due to the pre-save hook
   });
 
-  await user.save();
-
-  res.status(201).send("User created successfully.");
+  try {
+    await user.save();
+    res.status(201).send("User created successfully.");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error creating user");
+  }
 });
 
 // Define port for the server
