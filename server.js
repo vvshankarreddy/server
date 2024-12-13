@@ -4,8 +4,7 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs'); // Added bcrypt for password hashing
-const User = require('./models/user');
-
+const User = require('./models/users');  // Ensure this is only declared once
 
 dotenv.config(); // Load environment variables
 
@@ -43,9 +42,6 @@ app.get('/health-check', async (req, res) => {
     res.json({ server: 'down', database: 'not connected' });
   }
 });
-
-// Import the User model
-const User = require('./models/user');
 
 // Signup route (example route)
 app.post('/signup', async (req, res) => {
