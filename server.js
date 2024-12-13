@@ -4,6 +4,8 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs'); // Added bcrypt for password hashing
+const User = require('./models/user');
+
 
 dotenv.config(); // Load environment variables
 
