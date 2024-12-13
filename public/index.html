@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup and Login</title>
+</head>
+
+<body>
+    <h2>Signup</h2>
+    <form id="signup-form" method="POST">
+        <label for="username">Username:</label>
+        <input type="text" id="signup-username" name="username" required><br><br>
+        <label for="password">Password:</label>
+        <input type="password" id="signup-password" name="password" required><br><br>
+        <button type="submit">Signup</button>
+    </form>
+
+    <h2>Login</h2>
+    <form id="login-form" method="POST">
+        <label for="username">Username:</label>
+        <input type="text" id="login-username" name="username" required><br><br>
+        <label for="password">Password:</label>
+        <input type="password" id="login-password" name="password" required><br><br>
+        <button type="submit">Login</button>
+    </form>
+
+    <script>
+        // Handle signup form submission
+        document.getElementById('signup-form').onsubmit = function (event) {
+            event.preventDefault();
+
+            const username = document.getElementById('signup-username').value;
+            const password = document.getElementById('signup-password').value;
+
+            fetch('/signup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Signup successful!');
+                    } else {
+                        alert('Signup failed!');
+                    }
+                });
+        };
+
+        // Handle login form submission
+        document.getElementById('login-form').onsubmit = function (event) {
+            event.preventDefault();
+
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+
+            fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Login successful!');
+                    } else {
+                        alert('Invalid credentials!');
+                    }
+                });
+        };
+    </script>
+</body>
+
+</html>
