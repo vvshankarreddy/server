@@ -16,6 +16,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  verificationCode: {
+    type: String,
+    required: false, // Temporary code for verification
+  },
+  isVerified: {
+    type: Boolean,
+    default: false, // Default to false until verified
+  },
 });
 
 module.exports = mongoose.model('User', userSchema);
