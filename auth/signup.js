@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const User = require('./models/user'); // Path to your User model
+const User = require('../models/user'); // Path to your User model
 const { MailtrapClient } = require("mailtrap");
 const Redis = require('ioredis'); // Redis integration
 
