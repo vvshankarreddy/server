@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const path = require('path');
 const dotenv = require('dotenv');
-const signupRoute = require('./auth/signup'); // Import the signup route
+const signupRoute = require('./routes/authRoutes'); // Import the signup route
 
 dotenv.config(); // Load environment variables
 
