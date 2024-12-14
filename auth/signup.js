@@ -27,6 +27,9 @@ router.post('/', async (req, res) => {
     return res.status(400).send('All fields are required');
   }
 
+  // Log input data for debugging
+  console.log('Signup request data:', req.body);
+
   // Rate limiting: Check how many requests have been made in the last hour
   const requests = await redisClient.get(ip);
   if (requests && parseInt(requests) >= 5) {
@@ -37,40 +40,46 @@ router.post('/', async (req, res) => {
   await redisClient.incr(ip);
   await redisClient.expire(ip, 3600); // Set TTL for 1 hour
 
-  // Check if the email already exists in the main MongoDB database
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    return res.status(400).send('Email already in use');
+  try {
+    // Check if the email already exists in the main MongoDB database
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      console.log('Email already exists in the database:', email); // Debugging log
+      return res.status(400).send('Email already in use');
+    }
+
+    // Hash the password before storing
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Generate a 5-digit verification code
+    const verificationCode = Math.floor(10000 + Math.random() * 90000); // 5-digit code
+
+    // Store user data temporarily in Redis
+    const userData = {
+      name,
+      email,
+      password: hashedPassword,
+      verificationCode,
+      isVerified: false, // Pending verification
+    };
+
+    await redisClient.set(email, JSON.stringify(userData)); // Store user data in Redis with email as key
+    await redisClient.expire(email, 3600); // Set TTL for 1 hour to ensure data expires after a certain period
+
+    // Send verification email
+    const recipients = [{ email }];
+    await client.send({
+      from: sender,
+      to: recipients,
+      subject: "Verify your email address",
+      text: `Welcome, ${name}! Your verification code is: ${verificationCode}`,
+    });
+
+    res.status(201).send('User created successfully. Please verify your email.');
+  } catch (error) {
+    console.error('Signup failed:', error);
+    res.status(500).send('Server error. Please try again later.');
   }
-
-  // Hash the password before storing
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  // Generate a 5-digit verification code
-  const verificationCode = Math.floor(10000 + Math.random() * 90000); // 5-digit code
-
-  // Store user data temporarily in Redis
-  const userData = {
-    name,
-    email,
-    password: hashedPassword,
-    verificationCode,
-    isVerified: false, // Pending verification
-  };
-  
-  await redisClient.set(email, JSON.stringify(userData)); // Store user data in Redis with email as key
-  await redisClient.expire(email, 3600); // Set TTL for 1 hour to ensure data expires after a certain period
-
-  // Send verification email
-  const recipients = [{ email }];
-  await client.send({
-    from: sender,
-    to: recipients,
-    subject: "Verify your email address",
-    text: `Welcome, ${name}! Your verification code is: ${verificationCode}`,
-  });
-
-  res.status(201).send('User created successfully. Please verify your email.');
 });
 
 // Email verification route
