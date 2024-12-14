@@ -28,6 +28,6 @@
     },
     "homepage": "https://github.com/vvshankarreddy/server#readme",
     "engines": {
-        "node": "16.x"
+        "node": "18.x"
     }
 }
