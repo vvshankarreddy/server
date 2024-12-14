@@ -1,13 +1,13 @@
 const express = require('express');
-const cors = require('cors');  // Import CORS
+const cors = require('cors');  // Import CORS properly as a function
 const bcrypt = require('bcryptjs');
 const User = require('../models/user'); // Path to your User model
 const { MailtrapClient } = require("mailtrap");
 
 const app = express();
 
-// Enable CORS for all origins (allowing requests from any device)
-app.use(cors());
+// Enable CORS for all origins (this must be invoked as a function)
+app.use(cors());  // Correctly using cors() as a function
 
 // Parse JSON bodies
 app.use(express.json());
@@ -27,38 +27,25 @@ const unverifiedUsers = {};
 app.post('/signup', async (req, res) => {
   const { name, email, password } = req.body;
 
-  // Check if all required fields are provided
   if (!name || !email || !password) {
     return res.status(400).send('All fields are required');
   }
 
   try {
-    // Check if the user already exists in the database
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).send('Email already in use');
     }
 
-    // Check if the email is already in the unverified users list
     if (unverifiedUsers[email]) {
       return res.status(400).send('Email verification is pending. Please verify.');
     }
 
-    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
+    const verificationCode = Math.floor(10000 + Math.random() * 90000);
 
-    // Generate a 5-digit verification code
-    const verificationCode = Math.floor(10000 + Math.random() * 90000); // 5-digit code
+    unverifiedUsers[email] = { name, email, password: hashedPassword, verificationCode };
 
-    // Store the unverified user in memory
-    unverifiedUsers[email] = {
-      name,
-      email,
-      password: hashedPassword,
-      verificationCode,
-    };
-
-    // Send verification email
     const recipients = [{ email }];
     await client.send({
       from: sender,
@@ -71,7 +58,7 @@ app.post('/signup', async (req, res) => {
   } catch (error) {
     console.error(error);
     if (unverifiedUsers[email]) {
-      delete unverifiedUsers[email]; // Remove from temporary storage in case of failure
+      delete unverifiedUsers[email];
     }
     res.status(500).send('Server error. Please try again later.');
   }
@@ -81,32 +68,25 @@ app.post('/signup', async (req, res) => {
 app.post('/signup/verify', async (req, res) => {
   const { email, code } = req.body;
 
-  // Check if email and code are provided
   if (!email || !code) {
     return res.status(400).send('Email and verification code are required');
   }
 
-  // Retrieve the user from the unverified users list
   const unverifiedUser = unverifiedUsers[email];
 
   if (!unverifiedUser) {
     return res.status(404).send('No unverified user found with this email.');
   }
 
-  // Check if the code matches
   if (unverifiedUser.verificationCode === code) {
     try {
-      // Create and save the user in the database
       const newUser = new User({
         name: unverifiedUser.name,
         email: unverifiedUser.email,
         password: unverifiedUser.password,
       });
       await newUser.save();
-
-      // Remove the user from temporary storage
       delete unverifiedUsers[email];
-
       res.status(200).send('Email verified successfully. User created.');
     } catch (error) {
       console.error(error);
