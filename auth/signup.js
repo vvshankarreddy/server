@@ -1,87 +1,96 @@
-const express = require("express");
-const bcrypt = require("bcryptjs");
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const User = require('../models/user'); // Path to your User model
 const { MailtrapClient } = require("mailtrap");
-const crypto = require("crypto");
 
-const User = require("../models/user"); // Main user model
 const router = express.Router();
 
 // Mailtrap setup
-const TOKEN = "f0f1e8442010950d2c90e4e048705a7b"; // Replace with your Mailtrap token
+const TOKEN = "f0f1e8442010950d2c90e4e048705a7b"; // Replace with your Mailtrap API token
 const client = new MailtrapClient({ token: TOKEN });
-
 const sender = {
-  email: "hello@yourdomain.com",
-  name: "Your App",
+  email: "hello@vesarecine.xyz", // Replace with your Mailtrap verified sender email
+  name: "Your App Name", // Replace with your app name
 };
 
-// Temporary storage for unverified users
-const unverifiedUsers = new Map(); // Use an in-memory Map for simplicity (not suitable for production)
-
 // Signup route
-router.post("/signup", async (req, res) => {
+router.post('/', async (req, res) => {
   const { name, email, password } = req.body;
+
+  // Check if all required fields are provided
+  if (!name || !email || !password) {
+    return res.status(400).send('All fields are required');
+  }
 
   // Check if the user already exists
   const existingUser = await User.findOne({ email });
   if (existingUser) {
-    return res.status(400).send("Email already in use");
+    return res.status(400).send('Email already in use');
   }
 
-  // Generate a 5-digit verification code
-  const verificationCode = crypto.randomInt(10000, 99999).toString();
-
-  // Hash the password
+  // Hash the password before saving
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // Store user details temporarily
-  unverifiedUsers.set(email, { name, email, password: hashedPassword, verificationCode });
+  // Generate a 5-digit verification code
+  const verificationCode = Math.floor(10000 + Math.random() * 90000); // 5-digit code
 
-  // Send the verification email
-  const recipients = [{ email }];
+  // Create the user with a pending verification status
+  const user = new User({
+    name,
+    email,
+    password: hashedPassword,
+    verificationCode, // Store the code in the database
+    isVerified: false, // New field to track verification status
+  });
+
   try {
+    await user.save();
+
+    // Send verification email
+    const recipients = [{ email }];
     await client.send({
       from: sender,
       to: recipients,
-      subject: "Email Verification",
-      text: `Your verification code is: ${verificationCode}`,
-      category: "Email Verification",
+      subject: "Verify your email address",
+      text: `Welcome, ${name}! Your verification code is: ${verificationCode}`,
     });
-    res.status(200).send("Verification email sent.");
+
+    res.status(201).send('User created successfully. Please verify your email.');
   } catch (error) {
-    console.error("Failed to send email:", error);
-    unverifiedUsers.delete(email); // Remove from temporary storage
-    res.status(500).send("Failed to send verification email.");
+    console.error(error);
+    res.status(500).send('Server error. Please try again later.');
   }
 });
 
-// Verification route
-router.post("/verify", async (req, res) => {
-  const { email, verificationCode } = req.body;
+// Email verification route
+router.post('/verify', async (req, res) => {
+  const { email, code } = req.body;
 
-  // Check if the email exists in the temporary storage
-  const userData = unverifiedUsers.get(email);
-  if (!userData) {
-    return res.status(400).send("Invalid or expired verification request.");
+  // Check if email and code are provided
+  if (!email || !code) {
+    return res.status(400).send('Email and verification code are required');
   }
 
-  // Verify the code
-  if (userData.verificationCode !== verificationCode) {
-    return res.status(400).send("Invalid verification code.");
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).send('User not found');
+    }
+
+    // Check if the code matches
+    if (user.verificationCode === code) {
+      user.isVerified = true; // Mark user as verified
+      user.verificationCode = null; // Remove the code after verification
+      await user.save();
+      res.send('Email verified successfully.');
+    } else {
+      res.status(400).send('Invalid verification code.');
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server error. Please try again later.');
   }
-
-  // Create the user in the main database
-  const newUser = new User({
-    name: userData.name,
-    email: userData.email,
-    password: userData.password,
-  });
-  await newUser.save();
-
-  // Remove the user from temporary storage
-  unverifiedUsers.delete(email);
-
-  res.status(201).send("User verified and created successfully.");
 });
 
 module.exports = router;
