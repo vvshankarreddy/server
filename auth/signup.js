@@ -37,8 +37,8 @@ router.post('/', async (req, res) => {
   await redisClient.incr(ip);
   await redisClient.expire(ip, 3600); // Set TTL for 1 hour
 
-  // Check if the user already exists in Redis
-  const existingUser = await redisClient.get(email);
+  // Check if the email already exists in the main MongoDB database
+  const existingUser = await User.findOne({ email });
   if (existingUser) {
     return res.status(400).send('Email already in use');
   }
