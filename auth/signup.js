@@ -13,6 +13,9 @@ const sender = {
   name: "Your App Name", // Replace with your app name
 };
 
+// Temporary storage for unverified users
+const unverifiedUsers = {};
+
 // Signup route
 router.post('/', async (req, res) => {
   const { name, email, password } = req.body;
@@ -22,30 +25,32 @@ router.post('/', async (req, res) => {
     return res.status(400).send('All fields are required');
   }
 
-  // Check if the user already exists
+  // Check if the user already exists in the database
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     return res.status(400).send('Email already in use');
   }
 
-  // Hash the password before saving
+  // Check if the email is already in the unverified users list
+  if (unverifiedUsers[email]) {
+    return res.status(400).send('Email verification is pending. Please verify.');
+  }
+
+  // Hash the password
   const hashedPassword = await bcrypt.hash(password, 10);
 
   // Generate a 5-digit verification code
   const verificationCode = Math.floor(10000 + Math.random() * 90000); // 5-digit code
 
-  // Create the user with a pending verification status
-  const user = new User({
+  // Store the unverified user in memory
+  unverifiedUsers[email] = {
     name,
     email,
     password: hashedPassword,
-    verificationCode, // Store the code in the database
-    isVerified: false, // New field to track verification status
-  });
+    verificationCode,
+  };
 
   try {
-    await user.save();
-
     // Send verification email
     const recipients = [{ email }];
     await client.send({
@@ -55,9 +60,10 @@ router.post('/', async (req, res) => {
       text: `Welcome, ${name}! Your verification code is: ${verificationCode}`,
     });
 
-    res.status(201).send('User created successfully. Please verify your email.');
+    res.status(200).send('Verification code sent to your email.');
   } catch (error) {
     console.error(error);
+    delete unverifiedUsers[email]; // Remove from temporary storage in case of failure
     res.status(500).send('Server error. Please try again later.');
   }
 });
@@ -71,25 +77,34 @@ router.post('/verify', async (req, res) => {
     return res.status(400).send('Email and verification code are required');
   }
 
-  try {
-    const user = await User.findOne({ email });
+  // Retrieve the user from the unverified users list
+  const unverifiedUser = unverifiedUsers[email];
 
-    if (!user) {
-      return res.status(404).send('User not found');
-    }
+  if (!unverifiedUser) {
+    return res.status(404).send('No unverified user found with this email.');
+  }
 
-    // Check if the code matches
-    if (user.verificationCode === code) {
-      user.isVerified = true; // Mark user as verified
-      user.verificationCode = null; // Remove the code after verification
-      await user.save();
-      res.send('Email verified successfully.');
-    } else {
-      res.status(400).send('Invalid verification code.');
+  // Check if the code matches
+  if (unverifiedUser.verificationCode === code) {
+    try {
+      // Create and save the user in the database
+      const newUser = new User({
+        name: unverifiedUser.name,
+        email: unverifiedUser.email,
+        password: unverifiedUser.password,
+      });
+      await newUser.save();
+
+      // Remove the user from temporary storage
+      delete unverifiedUsers[email];
+
+      res.status(200).send('Email verified successfully. User created.');
+    } catch (error) {
+      console.error(error);
+      res.status(500).send('Server error. Please try again later.');
     }
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error. Please try again later.');
+  } else {
+    res.status(400).send('Invalid verification code.');
   }
 });
 
