@@ -92,7 +92,7 @@ router.post('/verify', async (req, res) => {
     const parsedData = JSON.parse(userData);
 
     // Check if the code matches
-    if (parsedData.verificationCode === code) {
+    if (parsedData.verificationCode === parseInt(code)) {
       // Mark user as verified in Redis
       parsedData.isVerified = true;
 
@@ -109,7 +109,7 @@ router.post('/verify', async (req, res) => {
       // Remove the temporary user data from Redis
       await redisClient.del(email);
 
-      res.send('Email verified successfully.');
+      res.status(200).send('Email verified successfully.');
     } else {
       res.status(400).send('Invalid verification code.');
     }
