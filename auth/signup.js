@@ -14,7 +14,7 @@ const TOKEN = "f0f1e8442010950d2c90e4e048705a7b"; // Replace with your Mailtrap 
 const client = new MailtrapClient({ token: TOKEN });
 const sender = {
   email: "hello@vesarecine.xyz", // Replace with your Mailtrap verified sender email
-  name: "Your App Name", // Replace with your app name
+  name: "Email verification", // Replace with your app name
 };
 
 // Signup route
