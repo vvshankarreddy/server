@@ -1,9 +1,0 @@
-const express = require('express');
-const router = express.Router();
-const { signUp, verifyEmail } = require('../controllers/authController');
-
-// Signup and email verification routes
-router.post('/signup', signUp);
-router.post('/verify', verifyEmail);
-
-module.exports = router;
