@@ -32,32 +32,32 @@ app.post('/signup', async (req, res) => {
     return res.status(400).send('All fields are required');
   }
 
-  // Check if the user already exists in the database
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    return res.status(400).send('Email already in use');
-  }
-
-  // Check if the email is already in the unverified users list
-  if (unverifiedUsers[email]) {
-    return res.status(400).send('Email verification is pending. Please verify.');
-  }
-
-  // Hash the password
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  // Generate a 5-digit verification code
-  const verificationCode = Math.floor(10000 + Math.random() * 90000); // 5-digit code
-
-  // Store the unverified user in memory
-  unverifiedUsers[email] = {
-    name,
-    email,
-    password: hashedPassword,
-    verificationCode,
-  };
-
   try {
+    // Check if the user already exists in the database
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).send('Email already in use');
+    }
+
+    // Check if the email is already in the unverified users list
+    if (unverifiedUsers[email]) {
+      return res.status(400).send('Email verification is pending. Please verify.');
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Generate a 5-digit verification code
+    const verificationCode = Math.floor(10000 + Math.random() * 90000); // 5-digit code
+
+    // Store the unverified user in memory
+    unverifiedUsers[email] = {
+      name,
+      email,
+      password: hashedPassword,
+      verificationCode,
+    };
+
     // Send verification email
     const recipients = [{ email }];
     await client.send({
@@ -70,7 +70,9 @@ app.post('/signup', async (req, res) => {
     res.status(200).send('Verification code sent to your email.');
   } catch (error) {
     console.error(error);
-    delete unverifiedUsers[email]; // Remove from temporary storage in case of failure
+    if (unverifiedUsers[email]) {
+      delete unverifiedUsers[email]; // Remove from temporary storage in case of failure
+    }
     res.status(500).send('Server error. Please try again later.');
   }
 });
